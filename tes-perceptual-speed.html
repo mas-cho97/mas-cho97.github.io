@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Perceptual Speed Test</title>
+<style>
+:root{--bg:#f3f5f7;--card:#fff;--ink:#1d2733;--mute:#5d6b7a;--line:#d5dce3;--accent:#0f6f78;--accent-ink:#fff;--sel:#e3f2f3;--ok:#1b7a43;--bad:#b3392f;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12181e;--card:#1b242d;--ink:#e8eef3;--mute:#9aa8b6;--line:#2f3b47;--accent:#4cc3cc;--accent-ink:#06282b;--sel:#1f3a3e;--ok:#5fd18b;--bad:#ff8a7e}}
+:root[data-theme="dark"]{--bg:#12181e;--card:#1b242d;--ink:#e8eef3;--mute:#9aa8b6;--line:#2f3b47;--accent:#4cc3cc;--accent-ink:#06282b;--sel:#1f3a3e;--ok:#5fd18b;--bad:#ff8a7e}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Segoe UI",system-ui,sans-serif}
+main{max-width:640px;margin:0 auto;padding:20px 16px 48px}
+h1{font-size:1.5rem;margin:0 0 4px}p{margin:0 0 12px}.mute{color:var(--mute);font-size:.92rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px;margin-top:16px}
+label{display:block;font-weight:600;margin:12px 0 4px}
+input,textarea{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:9px}
+textarea{font-family:Consolas,Menlo,monospace;font-size:.82rem;min-height:200px}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:end}.row>div{flex:1;min-width:140px}
+button{font:inherit;font-weight:600;border-radius:8px;border:1px solid var(--accent);padding:11px 20px;cursor:pointer;background:var(--accent);color:var(--accent-ink)}
+button.alt{background:transparent;color:var(--accent)}
+button:focus-visible,input:focus-visible,textarea:focus-visible,.opt:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.hidden{display:none}
+.bar{display:flex;justify-content:space-between;font-weight:600;margin-bottom:8px}
+.track{height:6px;background:var(--line);border-radius:3px;overflow:hidden}.fill{height:100%;background:var(--accent);width:100%;transition:width .25s linear}
+.q{font-weight:600;margin:18px 0 12px}
+.opt{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:12px;margin-bottom:10px;font-weight:500;font-size:1.05rem}
+.opt .b{min-width:30px;height:30px;border-radius:6px;background:var(--bg);display:grid;place-items:center;font-weight:700;color:var(--accent)}
+.opt.on{background:var(--sel);border-color:var(--accent);cursor:default}
+.opt span.t{font-family:Consolas,Menlo,monospace;letter-spacing:.04em}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:14px 0}
+.stat{border:1px solid var(--line);border-radius:8px;padding:10px 12px}.stat b{display:block;font-size:1.4rem}
+table{width:100%;border-collapse:collapse;font-size:.88rem}th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left}
+.wrap{overflow-x:auto}.ok{color:var(--ok)}.no{color:var(--bad)}
+</style>
+</head>
+<body>
+<main>
+<h1>Perceptual Speed Test</h1>
+
+<section id="setup" class="card">
+  <p>Dalam asesmen ini, Anda diminta <b>mengurutkan</b> sesuai petunjuk pada setiap soal. Ada tiga bentuk soal:</p>
+  <ol>
+    <li>Urutkan waktu jadwal keberangkatan bus dari paling awal hingga paling akhir</li>
+    <li>Urutkan nomor dan abjad rumah dari paling awal hingga paling akhir</li>
+    <li>Urutkan nama sesuai abjad dari paling awal hingga paling akhir</li>
+  </ol>
+  <p>Klik pilihan satu per satu, mulai dari urutan pertama. Anda <b>tidak dapat mengganti jawaban</b> setelah diklik, jadi perhatikan urutan sebelum menjawab. Ada <b>batasan waktu</b>, jadi kerjakan secepat dan seakurat mungkin.</p>
+  <div class="row">
+    <div><label for="nama">Nama lengkap</label><input id="nama" autocomplete="name"></div>
+    <div><label for="kelas">Kelas</label><input id="kelas"></div>
+  </div>
+  <p style="margin-top:16px"><button id="mulai">Mulai tes</button></p>
+  <p id="err" class="no" role="alert"></p>
+</section>
+
+<section id="tes" class="card hidden">
+  <div class="bar"><span id="no"></span><span id="sisa"></span></div>
+  <div class="track"><div class="fill" id="fill"></div></div>
+  <p class="q" id="tanya"></p>
+  <div id="opsi"></div>
+  <p class="mute">Tombol keyboard 1 sampai 5 memilih pilihan sesuai posisinya dari atas.</p>
+</section>
+
+<section id="hasil" class="card hidden">
+  <h2 style="margin-top:0">Tes selesai</h2>
+  <p id="who" class="mute"></p>
+  <div class="stats" id="stats"></div>
+  <p id="ok" role="status"></p>
+  <p><button id="kirimUlang" class="alt hidden">Kirim ulang hasil</button> <button id="salin" class="alt">Salin ringkasan</button></p>
+</section>
+</main>
+<script>
+/* ===== PENGATURAN GURU ===== */
+const ENDPOINT="https://script.google.com/macros/s/AKfycbws7WJK-w4Vs_Ip8gARAIW5nZFFHpuLC2PhjwAzdMq1L2NRFzboz9w9u94FoYLXt7ER/exec";        // tempel URL Web App Google Apps Script di antara tanda kutip
+const DURASI_MENIT=10;    // batas waktu tes
+const ACAK_SOAL=false;    // true = urutan soal diacak
+const MIN_NAMA=3;         // panjang minimal nama
+/* ===== DAFTAR SOAL: jenis; pilihan1; pilihan2; ... (W=waktu, R=rumah, N=nama) ===== */
+const DATA=`W;00:21;00:51;00:12;00:15;00:11
+W;01:05;05:15;01:15;01:51;05:01
+W;13:02;10:23;13:20;10:32;12:30
+W;11:21;11:01;11:02;11:12;11:11
+W;12:01;12:12;12:20;12:02;12:21
+W;21:21;21:01;21:10;21:12;21:02
+W;12:43;13:24;12:34;13:42;14:32
+W;04:35;04:53;05:43;03:45;05:34
+W;12:11:00;12:12:00;12:10:00;12:21:00;12:01:00
+W;13:31:00;13:01:00;13:10:00;13:33:00;13:13:00
+W;12:31:00;13:12:00;12:13:00;13:21:00;13:32:00
+W;05:40:00;05:04:00;04:50:00;04:05:00;04:54:00
+W;23:45:45;23:45:32;23:45:23;23:45:54;23:45:24
+W;15:16:41;15:16:51;15:16:14;15:16:11;15:16:15
+W;12:34:34;12:34:43;12:34:24;12:34:21;12:34:12
+W;14:56:46;14:56:16;14:56:41;14:56:14;14:56:51
+W;18:17:19;17:18:11;17:18:09;17:18:19;18:18:19
+W;16:34:24;16:43:42;16:34:42;16:34:22;16:43:24
+W;20:10:02;20:01:02;20:10:20;20:01:20;20:00:02
+W;13:12:25;13:22:52;13:21:25;13:12:52;13:21:52
+W;11:00:01;11:10:00;11:11:01;11:01:10;11:01:01
+W;20:00:20;20:22:00;20:02:00;20:00:02;20:20:00
+W;15:01:51;15:51:51;15:00:15;15:51:00;15:00:51
+R;A-122;A-121;A-125;A-123;A-124
+R;B-31;B-03;B-01;B-30;B-13
+R;G-16;G-66;G-60;G-06;G-61
+R;O-09;O-08;O-04;O-06;O-03
+R;E-242;E-244;E-248;E-243;E-246
+R;B4-21;B4-41;B4-12;B4-42;B4-24
+R;A3-31;A3-33;A3-03;A3-13;A3-30
+R;B6/10;B6/61;B6/16;B6/01;B6/06
+R;C3/33;C3/13;C3/23;C3/43;C3/03
+R;AH-11;AE-11;AF-11;AG-11;AC-11
+R;AK-03;AK-13;AK-23;AK-33;AK-63
+R;A-639;A-693;A-369;B-693;B-396
+R;E9-06;E6-09;E5-04;E4-05;E7-08
+R;H9/07;H8/07;H7/07;H5/07;H3/07
+R;BE-24;BC-21;BA-25;BK-22;BB-23
+R;FF-65;FE-65;EF-65;EF-56;FE-56
+R;OB-80;OB-88;OB-89;OB-09;OB-08
+R;EF-141;EF-144;EF-134;EF-143;EF-133
+R;IJK-01;IJL-01;IJB-01;IJH-01;IJM-01
+R;BD-L1;BD-K1;BD-P1;BD-D1;BD-G1
+R;AB-Q1;AB-C1;AB-J1;AB-E1;AB-B1
+R;CD-C1;CD-D2;CD-C2;CD-D1;CD-C3
+R;AL-200;AL-202;AL-207;AL-205;AL-270
+R;ABD-01;ABB-01;ABO-01;ABF-01;ABE-01
+N;Anton L. K.;Anton M. M.;Anton R. R.;Anton P. S.;Anton R. P.
+N;Putri Annisa;Putri Ramadhani;Putri Tiara;Putri Widya;Putri Utami
+N;Annisa Larasati;Annisa Sukmawati;Annisa Daniati;Annisa Rahmawati;Annisa Purbawati
+N;Putri Aisha Nugraha;Putri Aisha Pratama;Putri Aisha Wahyudi;Putri Aisha Birawa;Putri Aisha Ramadhani
+N;Banu;Bayu;Benu;Biru;Badu
+N;Kahfi;Kahlil;Khafi;Khalil;Kafka
+N;Adina;Adinia;Aidina;Andina;Addina
+N;Danira;Dandra;Diandra;Dinara;Danara
+N;Jimmy;Jonny;Jerry;Jenny;Jacky
+N;Rasha;Tasha;Alisha;Sasha;Felisha
+N;Amrin;Ammar;Amran;Andin;Andra
+N;Zafran;Zhafar;Zhidan;Zahfar;Zidane
+N;Bhani;Dhani;Ghani;Lhani;Fhani
+N;Dania;Hania;Rania;Tania;Kania
+N;M. Utama;M. Wahyu;M. Teguh;M. Zikri;M. Yanuar
+N;Aditya B. R.;Aditya R. P.;Aditya M. P.;Aditya P. W.;Aditya Y. T.`;
+/* ===== AKHIR PENGATURAN ===== */
+const TXT={W:"Urutkan jadwal keberangkatan bus di bawah ini dari yang paling awal ke yang paling akhir",
+R:"Urutkan nomor rumah di komplek perumahan berikut berdasarkan abjad dari yang paling awal ke yang paling akhir",
+N:"Urutkan daftar nama berikut berdasarkan abjad dari yang paling awal ke yang paling akhir"};
+const JN={W:"Jadwal bus",R:"Nomor rumah",N:"Nama"};
+const $=id=>document.getElementById(id);
+const cmp=(a,b)=>a<b?-1:a>b?1:0;
+let Q=[],qi=0,pick=[],res=[],t0=0,tq=0,total=DURASI_MENIT*60,timer=null,nama="",kelas="",ringkas="",payload=null,done=false;
+
+function parse(){
+  return DATA.split("\n").filter(l=>l.trim()).map(line=>{
+    const p=line.split(";").map(x=>x.trim());
+    const items=p.slice(1);
+    return{tp:p[0].toUpperCase(),items,key:items.slice().sort(cmp)};
+  });
+}
+$("mulai").onclick=()=>{
+  nama=$("nama").value.trim();kelas=$("kelas").value.trim();
+  if(nama.length<MIN_NAMA){$("err").textContent="Isi nama lengkap terlebih dahulu.";return}
+  $("err").textContent="";
+  Q=parse();if(ACAK_SOAL)Q.sort(()=>Math.random()-.5);
+  qi=0;res=[];done=false;
+  $("setup").classList.add("hidden");$("tes").classList.remove("hidden");
+  t0=Date.now();soal();
+  timer=setInterval(tick,200);tick();
+};
+function soal(){
+  pick=[];tq=Date.now();
+  $("no").textContent="Soal "+(qi+1)+" dari "+Q.length;
+  $("tanya").textContent=TXT[Q[qi].tp];
+  const box=$("opsi");box.innerHTML="";
+  Q[qi].items.forEach((it,i)=>{
+    const b=document.createElement("button");b.className="opt";b.type="button";
+    const n=document.createElement("span");n.className="b";
+    const t=document.createElement("span");t.className="t";t.textContent=it;
+    b.appendChild(n);b.appendChild(t);
+    b.onclick=()=>pilih(i);box.appendChild(b);
+  });
+}
+function pilih(i){
+  if(done||$("tes").classList.contains("hidden")||pick.includes(i))return;
+  pick.push(i);
+  const b=$("opsi").children[i];b.classList.add("on");b.firstChild.textContent=pick.length;
+  if(pick.length===Q[qi].items.length){
+    const q=Q[qi],urut=pick.map(k=>q.items[k]);
+    res.push({tp:q.tp,urut,key:q.key,ok:urut.every((v,k)=>v===q.key[k]),ms:Date.now()-tq});
+    qi++;
+    if(qi>=Q.length)selesai();else setTimeout(soal,120);
+  }
+}
+document.addEventListener("keydown",e=>{
+  if(/^[1-9]$/.test(e.key)&&Q[qi]&&Q[qi].items[+e.key-1]!==undefined)pilih(+e.key-1);
+});
+function tick(){
+  const s=Math.max(0,total-(Date.now()-t0)/1000);
+  const m=Math.floor(Math.ceil(s)/60),d=Math.ceil(s)%60;
+  $("sisa").textContent="Sisa waktu: "+m+":"+String(d).padStart(2,"0");
+  $("fill").style.width=(s/total*100)+"%";
+  if(s<=0)selesai();
+}
+function selesai(){
+  if(done)return;done=true;clearInterval(timer);
+  const dur=Math.min(total,(Date.now()-t0)/1000);
+  $("tes").classList.add("hidden");$("hasil").classList.remove("hidden");
+  const n=res.length,benar=res.filter(r=>r.ok).length,salah=n-benar,sisa=Q.length-n;
+  const akur=n?Math.round(benar/n*100):0,kec=dur>0?n/dur*60:0;
+  const rata=n?res.reduce((a,r)=>a+r.ms,0)/n/1000:0;
+  $("who").textContent=nama+(kelas?" ("+kelas+")":"")+" \u2013 waktu terpakai "+Math.round(dur)+" detik";
+  const S=[["Benar",benar],["Salah",salah],["Belum dikerjakan",sisa],["Akurasi",akur+"%"],["Kecepatan",kec.toFixed(1)+" soal/menit"],["Rata-rata per soal",rata.toFixed(1)+" detik"]];
+  $("stats").innerHTML="";
+  S.forEach(([l,v])=>{const d=document.createElement("div");d.className="stat";const b=document.createElement("b");b.textContent=v;d.appendChild(b);d.appendChild(document.createTextNode(l));$("stats").appendChild(d)});
+  const jn={};
+  ["W","R","N"].forEach(k=>{const rr=res.filter(r=>r.tp===k);jn[k]=rr.filter(r=>r.ok).length+"/"+rr.length});
+  ringkas="Perceptual Speed | "+nama+(kelas?" | "+kelas:"")+" | Benar "+benar+" | Salah "+salah+" | Belum "+sisa+" | Akurasi "+akur+"% | "+kec.toFixed(1)+" soal/menit | Rata-rata "+rata.toFixed(1)+" dtk | Bus "+jn.W+", Rumah "+jn.R+", Nama "+jn.N;
+  payload={nama,kelas,benar,salah,sisa,akur,kec:+kec.toFixed(1),rata:+rata.toFixed(1),dur:Math.round(dur),jW:jn.W,jR:jn.R,jN:jn.N,
+    rinci:res.map((r,i)=>(i+1)+"|"+r.tp+"|"+r.urut.join(",")+"|"+r.key.join(",")+"|"+(r.ok?1:0)+"|"+Math.round(r.ms/100)/10).join("\n")};
+  kirim();
+}
+async function kirim(){
+  const st=$("ok");$("kirimUlang").classList.add("hidden");
+  if(!ENDPOINT){st.textContent="Pengiriman otomatis belum diatur. Tekan Salin ringkasan lalu kirim ke guru.";st.className="no";return}
+  st.className="mute";st.textContent="Mengirim hasil...";
+  try{
+    await fetch(ENDPOINT,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload)});
+    st.textContent="Hasil Anda sudah dikirim ke guru.";st.className="ok";
+  }catch(e){
+    st.textContent="Hasil belum terkirim. Periksa internet, lalu tekan Kirim ulang hasil.";st.className="no";
+    $("kirimUlang").classList.remove("hidden");
+  }
+}
+$("kirimUlang").onclick=kirim;
+$("salin").onclick=async()=>{
+  try{await navigator.clipboard.writeText(ringkas);$("salin").textContent="Tersalin"}
+  catch(e){$("ok").textContent="Salin manual: "+ringkas}
+};
+</script>
+</body>
+</html>
