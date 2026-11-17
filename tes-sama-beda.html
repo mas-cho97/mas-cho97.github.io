@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tes Perceptual Speed (Sama atau Beda)</title>
+<style>
+:root{--bg:#f3f5f7;--card:#fff;--ink:#1d2733;--mute:#5d6b7a;--line:#d5dce3;--accent:#0f6f78;--accent-ink:#fff;--ok:#1b7a43;--bad:#b3392f}
+@media (prefers-color-scheme:dark){:root{--bg:#12181e;--card:#1b242d;--ink:#e8eef3;--mute:#9aa8b6;--line:#2f3b47;--accent:#4cc3cc;--accent-ink:#06282b;--ok:#5fd18b;--bad:#ff8a7e}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Segoe UI",system-ui,sans-serif}
+main{max-width:640px;margin:0 auto;padding:20px 16px 48px}
+h1{font-size:1.5rem;margin:0 0 4px}p{margin:0 0 12px}.mute{color:var(--mute);font-size:.92rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px;margin-top:16px}
+label{display:block;font-weight:600;margin:12px 0 4px}
+input{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:9px}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:end}.row>div{flex:1;min-width:140px}
+button{font:inherit;font-weight:600;border-radius:8px;border:1px solid var(--accent);padding:11px 20px;cursor:pointer;background:var(--accent);color:var(--accent-ink)}
+button.alt{background:transparent;color:var(--accent)}
+button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.hidden{display:none}
+.bar{display:flex;justify-content:space-between;font-weight:600;margin-bottom:8px}
+.track{height:6px;background:var(--line);border-radius:3px;overflow:hidden}.fill{height:100%;background:var(--accent);width:100%;transition:width .25s linear}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:22px 0}
+.item{border:1px solid var(--line);border-radius:8px;padding:24px 6px;text-align:center;font:600 clamp(1.1rem,5.2vw,1.7rem) Consolas,Menlo,monospace;letter-spacing:.1em;overflow-wrap:anywhere}
+.answers{display:flex;gap:12px}.answers button{flex:1;padding:18px;font-size:1.15rem}
+.fb{min-height:1.6em;font-weight:600;margin:14px 0 0}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:14px 0}
+.stat{border:1px solid var(--line);border-radius:8px;padding:10px 12px}.stat b{display:block;font-size:1.4rem}
+.ok{color:var(--ok)}.no{color:var(--bad)}
+</style>
+</head>
+<body>
+<main>
+<h1>Tes Perceptual Speed</h1>
+
+<section id="awal" class="card">
+  <p>Pada setiap soal Anda akan melihat <b>dua deretan huruf dan/atau angka</b>. Tentukan apakah keduanya <b>sama persis</b> atau <b>berbeda</b>, lalu tekan <b>Sama</b> atau <b>Beda</b>.</p>
+  <p>Perbedaan bisa hanya satu karakter, atau dua karakter yang tertukar posisi, jadi periksa dengan teliti. Jawaban <b>tidak dapat diubah</b> setelah dipilih.</p>
+  <p>Kerjakan <b>secepat dan seakurat mungkin</b>. Waktu tes <b>10 menit</b>. Jumlah soal sangat banyak dan tidak perlu diselesaikan semua. Jawaban salah mengurangi skor, jadi hindari menebak asal.</p>
+  <p>Sebelum tes dimulai ada beberapa soal latihan.</p>
+  <div class="row">
+    <div><label for="nama">Nama lengkap</label><input id="nama" autocomplete="name"></div>
+    <div><label for="kelas">Kelas</label><input id="kelas"></div>
+  </div>
+  <p style="margin-top:16px"><button id="mulai">Mulai latihan</button></p>
+  <p id="err" class="no" role="alert"></p>
+</section>
+
+<section id="tes" class="card hidden">
+  <div class="bar"><span id="no"></span><span id="sisa"></span></div>
+  <div class="track"><div class="fill" id="fill"></div></div>
+  <div class="pair"><div class="item" id="kiri"></div><div class="item" id="kanan"></div></div>
+  <div class="answers"><button id="s">Sama (S)</button><button id="b" class="alt">Beda (B)</button></div>
+  <p class="fb" id="fb" role="status"></p>
+  <p class="mute">Tombol keyboard: S = sama, B = beda.</p>
+</section>
+
+<section id="siap" class="card hidden">
+  <h2 style="margin-top:0">Latihan selesai</h2>
+  <p>Waktu 10 menit mulai berjalan saat Anda menekan tombol di bawah. Jawaban pada tes sesungguhnya tidak diberi tahu benar atau salah.</p>
+  <p><button id="mulaiAsli">Mulai tes</button></p>
+</section>
+
+<section id="hasil" class="card hidden">
+  <h2 style="margin-top:0">Tes selesai</h2>
+  <p id="who" class="mute"></p>
+  <div class="stats" id="stats"></div>
+  <p id="stt" role="status"></p>
+  <p><button id="kirimUlang" class="alt hidden">Kirim ulang hasil</button> <button id="salin" class="alt">Salin ringkasan</button></p>
+</section>
+</main>
+<script>
+/* ===== PENGATURAN GURU ===== */
+const ENDPOINT="https://script.google.com/macros/s/AKfycbyHTvFaAfvLoZPsB8VtTA3wr30hUouzypr_SgBU1ClGqF7-gizf9VCB6otN8pqVL0ti/exec";
+const DURASI_MENIT=10;   // batas waktu tes
+const MIN_NAMA=3;                // panjang minimal nama
+const NAMA_TES="Hasil Sama-Beda";// nama sheet tujuan di Google Sheet
+/* Soal latihan dan soal tes: kiri|kanan|S (sama) atau B (beda) */
+const LATIHAN=`ABX729|ABX729|S
+M4KT82|M4KT83|B
+Q7NH5D|Q7N5HD|B
+Z93PX6|Z93PX6|S`;
+const DATA=`6ZJ3VG|6Z93VG|B
+2787993|6787993|B
+5GGZ8WDS|5GGZ8WDS|S
+95785843|93785843|B
+9639449|9634949|B
+76MHQP6H|76MHQP6H|S
+ZKDZCUFZ|ZKDZCUZF|B
+248857683|248857783|B
+ZCFWADGC|ZCFWADGC|S
+9763832|9763832|S
+EC8QNYH8|EC8PNYH8|B
+7U4QVVK|7U4QVVK|S
+536VZ4|53JVZ4|B
+P44S4PH8|P44S4PH8|S
+24876287|24876287|S
+TJTUWAN|TJTUWAN|S
+CAMY55|CAMY55|S
+XJMVSNDX|XJMVZNDX|B
+ZKQSJJCZ|ZQKSJJCZ|B
+895887892|895887892|S
+2279956|2297956|B
+FWCGH4|F8CGH4|B
+UTJRED|UTRJED|B
+AQSKX6R|AQSKX6R|S
+VSAZKRDY|VS7ZKRDY|B
+524622476|524422476|B
+8YUXED2|Y8UXED2|B
+ZGFDV9TG|ZGFDVNTG|B
+CESA56D|CESA56D|S
+Z5TVPT|Z5TVPQ|B
+RFDJZVV|RFDJZVV|S
+397969829|397969849|B
+677873532|697873532|B
+P9DNDFU|P9DNDFU|S
+8C9SED|89CSED|B
+4NNRSH8|4NNPSH8|B
+MPW7JN|MPW7JN|S
+WFKAEF|WFKAEF|S
+7842597|7842597|S
+32826764|33826764|B
+RAHKKJ|RAHKKJ|S
+HGU2VA|HGU2VA|S
+Y3PQU3J|Y3PQU3J|S
+6796262|6796622|B
+RYQ3TE8|RYQ3ET8|B
+6KDXNEJ|6KDNXEJ|B
+U6TYDW|U6TYDW|S
+5243538|5243538|S
+T9P9YZXW|T9P9ZYXW|B
+FSCUCPJ|FSCUPCJ|B
+862333267|862333267|S
+ACV7TDVF|ACV7TDVF|S
+HQ5MTHC|HQ5MTHC|S
+UUUVMFVK|UUUVFMVK|B
+JGFUWP|JGFUYP|B
+QHHYCVV|QHHYCVV|S
+8638653|8638653|S
+XFEECVS|XFEECVS|S
+RD5D98|RD5D9A|B
+SJG6UP|SJG6UP|S
+FPWVNAJ|FPWVNAJ|S
+WPNZRTRH|WPNZRTRH|S
+9T3JEHNW|9T3JHENW|B
+93C53GF|93C53GF|S
+87KTGN|87KTGN|S
+9883565|9885365|B
+QEZWAUG9|QEZWAUG9|S
+ENAFUE9|ENAFUE9|S
+SENAYS|SENAMS|B
+F2HPQH|F2HPQH|S
+SKKMSCFX|SKKMSCFX|S
+NWZUPSN|NWZUPSQ|B
+39798694|39728694|B
+SCZSVA|SCZSVA|S
+JJTWUVU|JJNWUVU|B
+HHV755|HHV575|B
+RGERFM|RGERFM|S
+ACGUGS|ACGGUS|B
+8PM9KMHY|8PM9KMHY|S
+DWNJ4DN3|DWNJ43N3|B
+2GXNSWNC|6GXNSWNC|B
+PCJ8H3|PCJ8H3|S
+39YFJH|39YYJH|B
+ZK468S|ZK468S|S
+QG94M8C|QG94M8C|S
+7974592|7984592|B
+JY8Y8Y|JY8Y8Y|S
+76294893|76298493|B
+VEJEEMX|VEJEEMX|S
+6VC2HWX|6VC2HWX|S
+JTAJNUG|TJAJNUG|B
+3537988|3587988|B
+2WCEQ87T|2WCEQ87C|B
+DMJHJMRX|DMJHJMRX|S
+38TSDTY|38TSDTY|S
+UNQVFWH|UNQVFWH|S
+797522622|797522624|B
+YCVUAGG|YCVUAGG|S
+GUMSEM|CUMSEM|B
+ESKZHCJ|ESKZHCJ|S
+784849562|784849562|S
+EG7WRA|EC7WRA|B
+AZMGTD|AKMGTD|B
+PXVD25D|PXVD2D5|B
+FZVYZA|FZVYZA|S
+PDGRJ5WQ|YDGRJ5WQ|B
+UQGKUUZ|SQGKUUZ|B
+YT5YG65|YT5YG65|S
+4293875|3293875|B
+6YTJUU|6YTJUV|B
+286745388|286645388|B
+9NCDZ27|9NCDZ2M|B
+EKN3VMR|EKN3VMR|S
+528294383|528294383|S
+JGAKFRS5|JXAKFRS5|B
+KY4D9AP|KY4D9AP|S
+WEZYDR|WEZYDR|S
+PUFK53S|PUFK53S|S
+997663748|997663748|S
+W9FSMN|79FSMN|B
+MDMCS7|MDMCS7|S
+4VRUCM|4VRUCM|S
+6TT9357|6TT9357|S
+224666447|226466447|B
+638555489|638555489|S
+ZFG86Z|XFG86Z|B
+MS8G3T|MS8G3T|S
+3MM2RY|3MMZRY|B
+3HU9SNM|3HU9SNM|S
+WPMAVJDJ|PWMAVJDJ|B
+KZZKUQPS|KZZKUQRS|B
+US8JN9A|US8JN9A|S
+99442698|99442688|B
+WMRH76|QMRH76|B
+GCHCAE|GCQCAE|B
+VR8ETRP|VR8ETRP|S
+VPHMSR|VPHMSR|S
+36PE2FHY|36PF2FHY|B
+YKE8733|WKE8733|B
+8FM524E|8FM524E|S
+39787876|39787896|B
+Y3KTXSF|H3KTXSF|B
+JWPRJDN|JKPRJDN|B
+KZAXNZTP|KZAXNTZP|B
+SQUMED|SQUMED|S
+KD7ZTZV|KD7ZTZV|S
+U3PFFPV|U3PFFPV|S
+4D29PC|4D29PC|S
+MEGV4T|MEVG4T|B
+5EWTF5|5EWTFS|B
+GU3FM8Y2|GU3FM8Y2|S
+A7K32X|A7KA2X|B
+SZKDQX|FZKDQX|B
+GYM5WJ|GYMW5J|B
+CWQ8M749|CWQ8M749|S
+AVD4V85N|AVD4V85N|S
+PZFAZJW|PZFZAJW|B
+SPYGVCX|SPYGVCX|S
+NKWGQVA|NKWGTVA|B
+999889787|999889787|S
+CFCUYSJV|FCCUYSJV|B
+WHFWUP|WHFWUP|S
+4HAV7DQH|4HAV7DQH|S
+PMQZGEDE|PMQZGEDE|S
+Z3PDZGQJ|Z3PDZGQJ|S
+FYXZWY|FDXZWY|B
+467892482|467896482|B
+399287874|399287874|S
+QFTTR2P|QFTTR2P|S
+DEGKTDG|DEGKTDG|S
+58WTHFRX|58WTHERX|B
+MX6K7Z|MX6K7Z|S
+S45Z697|S45Z697|S
+464736823|464736823|S
+TWAPCU|TWAPCU|S
+PNDUMJ|SNDUMJ|B
+2MYDT75|2MYMT75|B
+GG9PFDZ|GGP9FDZ|B
+NQD9APS|NQD9ARS|B
+MMYNAR|MMYNAR|S
+988823352|988923352|B
+56345984|57345984|B
+54938453|54238453|B
+P3R3DN8|P3R3DN8|S
+V68EV89|V68EV98|B
+F5HFS9SV|F5HF9SSV|B
+96738247|96738247|S
+U56AKM2|V56AKM2|B
+5928976|5298976|B
+58973658|58937658|B
+GP86MG6|2P86MG6|B
+JYNSHUJ|JYNSHUJ|S
+553723254|553723254|S
+FTVN98|FTVN98|S
+52984595|52984595|S
+JTXFUW|JTXFUY|B
+KHQAZE|KHQAZE|S
+NKP6ZHJM|NKP6ZJHM|B
+HYZJSM|HYZJSM|S
+HU56JSN|HU56JSN|S
+HMUSPRUT|YMUSPRUT|B
+C4QF3NE|C4QF3NE|S
+QP256TDU|QP256TDU|S
+V7CW27|V7CW27|S
+ZQSCVX|ZQSCVX|S
+XRNRTV|XRNTRV|B
+KNFMMKJ|KNMFMKJ|B
+MNAGV7|MNGAV7|B
+MJMZG4|MJMZ4G|B
+HNUDFYXF|HNUDFYXF|S
+7VTE49DK|7VTE49DK|S
+FQPFWTYV|FQPFWTQV|B
+NJEAUE|NJEAUE|S
+TZCVSR|TZCVSR|S
+RVVZHKDF|RVVZHKDF|S
+HQENPJD|NQENPJD|B
+257677522|257675722|B
+625743696|625743695|B
+D3RWMU|D3RWMU|S
+P6SMME|P6SMME|S
+643247956|643247956|S
+XFKXAK|FXKXAK|B
+RKYRXXF|RYKRXXF|B
+X3WTSE|X3WSTE|B
+822235886|822235886|S
+E4KFZ3GH|E4KEZ3GH|B
+M4DGF4|4MDGF4|B
+AJGRJS|AJGRJS|S
+PMWTHKU|PMWTHKU|S
+RZZVQJX|RZZVQJX|S
+878262362|878282362|B
+WMR85FG|WMR85FG|S
+QSWKTCC|QSWKTCC|S
+H2WNA6S|H2WNA6S|S
+WNUDFF|VNUDFF|B
+D95JH4W|D95JH4W|S
+GQZMNX|GAZMNX|B
+QXFY8DAE|QXFY88AE|B
+75774283|75774283|S
+47469684|47469684|S
+XMY67J7|XMY67J7|S
+QPZZXP|QPZFXP|B
+GVWEYZXJ|VGWEYZXJ|B
+DHGFJTR|DHGFJTR|S
+N9JUGT7|N9JUGT7|S
+725769|725769|S
+CZ8ZYWY|CZ8ZYWY|S
+EYGUQQM|EDGUQQM|B
+424989754|244989754|B
+89626588|89628588|B
+9GN7NUYG|9GN7NUYG|S
+DPYNNJGT|DRYNNJGT|B
+YFXUHN|YFXHUN|B
+QDVZPDSH|QDVZDPSH|B
+EDPGKKRA|EDPGKKRA|S
+DD33G96R|DD33G96R|S
+CEJ6DGGR|CEJ6GDGR|B
+XEC9V757|XCE9V757|B
+EU373K9|EU337K9|B
+VYXWDK|VYXWDK|S
+UK4QQF|UK4QQF|S
+M44F9J|M44F9J|S
+E9RYS7|E9RYP7|B
+64VUV5|64VUV5|S
+XSAE5UHA|SXAE5UHA|B
+WX4RCD|WX4RCD|S
+MXMVDSJC|NXMVDSJC|B
+NMF254MC|NMF284MC|B
+JT67QG6W|JT67QG6W|S
+Y3UHW3TW|Y3UH3WTW|B
+395942426|395944226|B
+APEUJAN|QPEUJAN|B
+R9CJPXY|R9CJPXY|S
+YNKGTY|YNKGTY|S
+FWJZKGCU|FJWZKGCU|B
+AMGNUXD|AMGNUXD|S
+F3R83MH|FPR83MH|B
+ANPYGXT|ANPYGXT|S
+U68N3S7|U68N3S7|S
+ZXJYQXAJ|ZXJYXQAJ|B
+9997557|9997557|S
+JCAAPWW|JCCAPWW|B
+785927835|785927835|S
+VFXVVT|VFXUVT|B
+KTJHXX5|K4JHXX5|B
+PKRDFTKY|PKRDFTZY|B
+AUSK2A|AUSK2A|S
+WGQRKHSZ|WGQRKHSZ|S
+4SC6RT|4S6CRT|B
+9474953|9474953|S
+73572653|73572633|B
+R3P7QH2|RFP7QH2|B
+89298793|89298793|S
+REYDXA|REYEXA|B
+NCQMRA2P|NTQMRA2P|B
+YXPZTA35|YXPZTAK5|B
+78424356|78424356|S
+38PV6C|38PV6Y|B
+N9KVVDQ|N9KVVDQ|S
+35CMKAPG|35CMKAPG|S`;
+/* ===== AKHIR PENGATURAN ===== */
+const $=id=>document.getElementById(id);
+const baris=t=>t.split("\n").filter(l=>l.trim()).map(l=>{const p=l.split("|").map(x=>x.trim());return{a:p[0],b:p[1],k:p[2].toUpperCase()}});
+let mode="",items=[],idx=0,jawab=[],waktu=[],t0=0,tq=0,total=DURASI_MENIT*60,timer=null,kunci=false,done=false,nama="",kelas="",ringkas="",payload=null;
+
+$("mulai").onclick=()=>{
+  nama=$("nama").value.trim();kelas=$("kelas").value.trim();
+  if(nama.length<MIN_NAMA){$("err").textContent="Isi nama lengkap terlebih dahulu.";return}
+  $("err").textContent="";
+  mode="latihan";items=baris(LATIHAN);idx=0;
+  $("awal").classList.add("hidden");$("tes").classList.remove("hidden");
+  $("sisa").textContent="Latihan (tidak dinilai)";$("fill").style.width="0%";
+  tampil();
+};
+function tampil(){
+  $("kiri").textContent=items[idx].a;$("kanan").textContent=items[idx].b;
+  $("no").textContent=(mode==="latihan"?"Latihan ":"Soal ")+(idx+1)+(mode==="latihan"?" dari "+items.length:"");
+  tq=Date.now();
+}
+$("mulaiAsli").onclick=()=>{
+  mode="tes";items=baris(DATA);idx=0;jawab=[];waktu=[];done=false;
+  $("siap").classList.add("hidden");$("tes").classList.remove("hidden");
+  $("fb").textContent="";
+  t0=Date.now();tampil();timer=setInterval(tick,200);tick();
+};
+function tick(){
+  const s=Math.max(0,total-(Date.now()-t0)/1000);
+  const m=Math.floor(Math.ceil(s)/60),d=Math.ceil(s)%60;
+  $("sisa").textContent="Sisa waktu: "+m+":"+String(d).padStart(2,"0");
+  $("fill").style.width=(s/total*100)+"%";
+  if(s<=0)selesai();
+}
+function pilih(v){
+  if(kunci||done||$("tes").classList.contains("hidden"))return;
+  const it=items[idx];
+  if(mode==="latihan"){
+    kunci=true;const ok=v===it.k;
+    $("fb").textContent=ok?"Benar":"Salah. Jawaban yang benar: "+(it.k==="S"?"Sama":"Beda");
+    $("fb").className="fb "+(ok?"ok":"no");
+    setTimeout(()=>{
+      kunci=false;$("fb").textContent="";idx++;
+      if(idx>=items.length){$("tes").classList.add("hidden");$("siap").classList.remove("hidden")}
+      else tampil();
+    },1100);
+    return;
+  }
+  jawab[idx]=v;waktu[idx]=Date.now()-tq;idx++;
+  if(idx>=items.length)selesai();else tampil();
+}
+$("s").onclick=()=>pilih("S");$("b").onclick=()=>pilih("B");
+document.addEventListener("keydown",e=>{
+  if(e.repeat)return;const k=e.key.toLowerCase();
+  if(k==="s")pilih("S");else if(k==="b")pilih("B");
+});
+function selesai(){
+  if(done)return;done=true;clearInterval(timer);
+  const dur=Math.min(total,(Date.now()-t0)/1000);
+  $("tes").classList.add("hidden");$("hasil").classList.remove("hidden");
+  let benar=0,salah=0;
+  jawab.forEach((v,i)=>{if(v===items[i].k)benar++;else salah++});
+  const n=benar+salah,kosong=items.length-n;
+  const akur=n?Math.round(benar/n*100):0,skor=benar-salah;
+  const kec=dur>0?n/dur*60:0,rata=n?waktu.reduce((a,x)=>a+x,0)/n/1000:0;
+  $("who").textContent=nama+(kelas?" ("+kelas+")":"")+" \u2013 waktu terpakai "+Math.round(dur)+" detik";
+  const S=[["Dikerjakan",n],["Benar",benar],["Salah",salah],["Akurasi",akur+"%"],["Skor (benar \u2212 salah)",skor],["Kecepatan",kec.toFixed(1)+" soal/menit"]];
+  $("stats").innerHTML="";
+  S.forEach(([l,v])=>{const d=document.createElement("div");d.className="stat";const b=document.createElement("b");b.textContent=v;d.appendChild(b);d.appendChild(document.createTextNode(l));$("stats").appendChild(d)});
+  ringkas="Perceptual Speed Sama-Beda | "+nama+(kelas?" | "+kelas:"")+" | Dikerjakan "+n+" | Benar "+benar+" | Salah "+salah+" | Akurasi "+akur+"% | Skor "+skor+" | "+kec.toFixed(1)+" soal/menit";
+  const rinci=jawab.map((v,i)=>(i+1)+"|"+items[i].a+"|"+items[i].b+"|"+items[i].k+"|"+v+"|"+Math.round(waktu[i]/100)/10).join("\n");
+  payload={tes:NAMA_TES,
+    header:["Nama","Kelas","Dikerjakan","Benar","Salah","Akurasi (%)","Skor (benar - salah)","Soal/menit","Rata-rata per soal (dtk)","Waktu terpakai (dtk)","Rincian (no|kiri|kanan|kunci|jawab|detik)"],
+    row:[nama,kelas,n,benar,salah,akur,skor,+kec.toFixed(1),+rata.toFixed(1),Math.round(dur),rinci]};
+  kirim();
+}
+async function kirim(){
+  const st=$("stt");$("kirimUlang").classList.add("hidden");
+  if(!ENDPOINT){st.textContent="Pengiriman otomatis belum diatur. Tekan Salin ringkasan lalu kirim ke guru.";st.className="no";return}
+  st.className="mute";st.textContent="Mengirim hasil...";
+  try{
+    await fetch(ENDPOINT,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload)});
+    st.textContent="Hasil Anda sudah dikirim ke guru.";st.className="ok";
+  }catch(e){
+    st.textContent="Hasil belum terkirim. Periksa internet, lalu tekan Kirim ulang hasil.";st.className="no";
+    $("kirimUlang").classList.remove("hidden");
+  }
+}
+$("kirimUlang").onclick=kirim;
+$("salin").onclick=async()=>{
+  try{await navigator.clipboard.writeText(ringkas);$("salin").textContent="Tersalin"}
+  catch(e){$("stt").textContent="Salin manual: "+ringkas}
+};
+</script>
+</body>
+</html>
