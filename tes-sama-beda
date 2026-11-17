@@ -33,7 +33,6 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline
 <body>
 <main>
 <h1>Tes Perceptual Speed</h1>
-
 <section id="awal" class="card">
   <p>Pada setiap soal Anda akan melihat <b>dua deretan huruf dan/atau angka</b>. Tentukan apakah keduanya <b>sama persis</b> atau <b>berbeda</b>, lalu tekan <b>Sama</b> atau <b>Beda</b>.</p>
   <p>Perbedaan bisa hanya satu karakter, atau dua karakter yang tertukar posisi, jadi periksa dengan teliti. Jawaban <b>tidak dapat diubah</b> setelah dipilih.</p>
